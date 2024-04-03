@@ -1,17 +1,13 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
+const got_1 = require("got");
+const crypto_1 = require("crypto");
+const qs_1 = require("qs");
+const ws_1 = require("ws");
+
 exports.BackpackClient = void 0;
-const got_1 = __importDefault(require("got"));
-const crypto_1 = __importDefault(require("crypto"));
-const qs_1 = __importDefault(require("qs"));
-const ws_1 = __importDefault(require("ws"));
+
 const BACKOFF_EXPONENT = 1.5;
 const DEFAULT_TIMEOUT_MS = 5000;
-// const BASE_URL = "https://api.backpack.exchange/";
-const BASE_URL = "https://api.cf.backpack.exchange/";
+const BASE_URL = "https://api.backpack.exchange/";
 const instructions = {
     public: new Map([
         ["assets", { url: `${BASE_URL}api/v1/assets`, method: "GET" }],
@@ -66,14 +62,14 @@ const toPkcs8der = (rawB64) => {
     var rawPrivate = Buffer.from(rawB64, "base64").subarray(0, 32);
     var prefixPrivateEd25519 = Buffer.from("302e020100300506032b657004220420", "hex");
     var der = Buffer.concat([prefixPrivateEd25519, rawPrivate]);
-    return crypto_1.default.createPrivateKey({ key: der, format: "der", type: "pkcs8" });
+    return crypto_1.createPrivateKey({ key: der, format: "der", type: "pkcs8" });
 };
 // https://stackoverflow.com/questions/68612396/sign-and-verify-jws-json-web-signature-with-ed25519-keypair
 const toSpki = (rawB64) => {
     var rawPublic = Buffer.from(rawB64, "base64");
     var prefixPublicEd25519 = Buffer.from("302a300506032b6570032100", "hex");
     var der = Buffer.concat([prefixPublicEd25519, rawPublic]);
-    return crypto_1.default.createPublicKey({ key: der, format: "der", type: "spki" });
+    return crypto_1.createPublicKey({ key: der, format: "der", type: "spki" });
 };
 /**
  * https://docs.backpack.exchange/#section/Authentication/Signing-requests
@@ -88,15 +84,15 @@ const getMessageSignature = (request, privateKey, timestamp, instruction, window
     function alphabeticalSort(a, b) {
         return a.localeCompare(b);
     }
-    const message = qs_1.default.stringify(request, { sort: alphabeticalSort });
+    const message = qs_1.stringify(request, { sort: alphabeticalSort });
     const headerInfo = { timestamp, window: window ?? DEFAULT_TIMEOUT_MS };
-    const headerMessage = qs_1.default.stringify(headerInfo);
+    const headerMessage = qs_1.stringify(headerInfo);
     const messageToSign = "instruction=" +
         instruction +
         "&" +
         (message ? message + "&" : "") +
         headerMessage;
-    const signature = crypto_1.default.sign(null, Buffer.from(messageToSign), toPkcs8der(privateKey));
+    const signature = crypto_1.sign(null, Buffer.from(messageToSign), toPkcs8der(privateKey));
     return signature.toString("base64");
 };
 const rawRequest = async (instruction, headers, data) => {
@@ -113,7 +109,7 @@ const rawRequest = async (instruction, headers, data) => {
     if (method == "GET") {
         Object.assign(options, { method });
         fullUrl =
-            url + (Object.keys(data).length > 0 ? "?" + qs_1.default.stringify(data) : "");
+            url + (Object.keys(data).length > 0 ? "?" + qs_1.stringify(data) : "");
     }
     else if (method == "POST" || method == "DELETE") {
         Object.assign(options, {
@@ -121,7 +117,7 @@ const rawRequest = async (instruction, headers, data) => {
             body: JSON.stringify(data),
         });
     }
-    const response = await (0, got_1.default)(fullUrl, options);
+    const response = await (0, got_1)(fullUrl, options);
     const contentType = response.headers["content-type"];
     if (contentType?.includes("application/json")) {
         const parsed = JSON.parse(response.body, function (_key, value) {
@@ -161,7 +157,7 @@ class BackpackClient {
         this.config = { privateKey, publicKey };
         // Verify that the keys are a correct pair before sending any requests. Ran
         // into errors before with that which were not obvious.
-        const pubkeyFromPrivateKey = crypto_1.default
+        const pubkeyFromPrivateKey = crypto_1
             .createPublicKey(toPkcs8der(privateKey))
             .export({ format: "der", type: "spki" })
             .toString("base64");
@@ -371,7 +367,7 @@ class BackpackClient {
       * @return {Object} Websocket     Websocket connecting to order update stream
       */
     subscribeOrderUpdate() {
-        const privateStream = new ws_1.default('wss://ws.backpack.exchange');
+        const privateStream = new ws_1('wss://ws.backpack.exchange');
         const timestamp = Date.now();
         const window = 5000;
         const signature = getMessageSignature({}, this.config.privateKey, timestamp, "subscribe", window);
@@ -390,4 +386,4 @@ class BackpackClient {
         return privateStream;
     }
 }
-exports.BackpackClient = BackpackClient;
+module.exports.exports.BackpackClient = BackpackClient;
