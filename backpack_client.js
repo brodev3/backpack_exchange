@@ -1,12 +1,18 @@
-const got_1 = require("got");
 const crypto_1 = require("crypto");
 const qs_1 = require("qs");
 const ws_1 = require("ws");
+const axios = require('axios');
 
-exports.BackpackClient = void 0;
 
+
+// const host = '...';
+// const port = 47186;
+// const auth = {
+//     username: '',
+//     password: ''
+//   }
 const BACKOFF_EXPONENT = 1.5;
-const DEFAULT_TIMEOUT_MS = 5000;
+const DEFAULT_TIMEOUT_MS = 60000;
 const BASE_URL = "https://api.backpack.exchange/";
 const instructions = {
     public: new Map([
@@ -100,11 +106,11 @@ const rawRequest = async (instruction, headers, data) => {
         ? instructions.private.get(instruction)
         : instructions.public.get(instruction);
     let fullUrl = url;
-    headers["User-Agent"] = "Backpack Typescript API Client";
-    headers["Content-Type"] =
-        method == "GET"
-            ? "application/x-www-form-urlencoded"
-            : "application/json; charset=utf-8";
+    // headers["User-Agent"] = "Backpack Typescript API Client";
+    headers["Content-Type"] ="application/json; charset=utf-8"
+        // method != "GET"
+        //     ? "application/x-www-form-urlencoded"
+        //     : "application/json; charset=utf-8";
     const options = { headers };
     if (method == "GET") {
         Object.assign(options, { method });
@@ -114,20 +120,30 @@ const rawRequest = async (instruction, headers, data) => {
     else if (method == "POST" || method == "DELETE") {
         Object.assign(options, {
             method,
-            body: JSON.stringify(data),
+            data: JSON.stringify(data),
         });
     }
-    const response = await (0, got_1)(fullUrl, options);
+    options.url = fullUrl;
+    // options.proxy = {
+    //     protocol: 'http',
+    //     host: host,
+    //     port: port,
+    //     auth: auth
+    // }
+    const response = await axios(options);
     const contentType = response.headers["content-type"];
     if (contentType?.includes("application/json")) {
-        const parsed = JSON.parse(response.body, function (_key, value) {
+
+        const parsed = Object.assign({}, response.data);
+        Object.keys(parsed).forEach(key => {
+            let value = parsed[key];
             if (value instanceof Array && value.length == 0) {
                 return value;
             }
             if (isNaN(Number(value))) {
                 return value;
             }
-            return Number(value);
+            parsed[key] = Number(value);
         });
         if (parsed.error && parsed.error.length) {
             const error = parsed.error
@@ -136,7 +152,7 @@ const rawRequest = async (instruction, headers, data) => {
             if (!error.length) {
                 throw new Error("Backpack API returned an unknown error");
             }
-            throw new Error(`url=${url} body=${options["body"]} err=${error.join(", ")}`);
+            throw new Error(`url=${url} body=${options["data"]} err=${error.join(", ")}`);
         }
         return parsed;
     }
@@ -386,4 +402,4 @@ class BackpackClient {
         return privateStream;
     }
 }
-module.exports.exports.BackpackClient = BackpackClient;
+module.exports.BackpackClient = BackpackClient;

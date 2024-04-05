@@ -1,9 +1,10 @@
 const backpack_client_1 = require("./backpack_client");
+const fs = require('fs');
 
-/// EDIT HERE ///
-const API_KEY = "VC2jGOXfxxxxxxxxxxxxxxxxxxxx="
-const API_SECRET = "EaIvdhigkxxxxxxxxxxxxxxxx="
-/////////////
+const conf  = JSON.parse(fs.readFileSync('./config.json', 'utf8'))
+const API_KEY = conf.wallets.my.key
+const API_SECRET = conf.wallets.my.sec
+
 
 function delay(ms) {
     return new Promise(resolve => {
@@ -82,8 +83,8 @@ const sellfun = async (client) => {
 
     let userbalance2 = await client.Balance();
     console.log(getNowFormatDate(), `My Account Infos: ${userbalance2.SOL.available} $SOL | ${userbalance2.USDC.available} $USDC`, );
-    
-    let { lastPrice: lastPriceask } = await client.Ticker({ symbol: "SOL_USDC" });
+    let orderbook = await client.Depth({ symbol: "SOL_USDC" });
+    let lastPriceask = orderbook.bids.at(-1)[0];
     console.log(getNowFormatDate(), "Price sol_usdc:", lastPriceask);
     let quantitys = (userbalance2.SOL.available - 0.02).toFixed(2).toString();
     console.log(getNowFormatDate(), `Trade... ${quantitys} $SOL to ${(lastPriceask * quantitys).toFixed(2)} $USDC`);
@@ -121,7 +122,8 @@ const buyfun = async (client) => {
         balanceSol = userbalance.SOL.available
     }
     console.log(getNowFormatDate(), `My Account Infos: ${balanceSol} $SOL | ${userbalance.USDC.available} $USDC`, );
-    let { lastPrice } = await client.Ticker({ symbol: "SOL_USDC" });
+    let orderbook = await client.Depth({ symbol: "SOL_USDC" });
+    let lastPrice = orderbook.asks[0][0];
     console.log(getNowFormatDate(), "Price of sol_usdc:", lastPrice);
     let quantitys = ((userbalance.USDC.available - 2) / lastPrice).toFixed(2).toString();
     console.log(getNowFormatDate(), `Trade ... ${(userbalance.USDC.available - 2).toFixed(2).toString()} $USDC to ${quantitys} $SOL`);
