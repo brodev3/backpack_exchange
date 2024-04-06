@@ -53,7 +53,13 @@ const init = async (client) => {
         console.log("============================\n")
         
         console.log(getNowFormatDate(), "Waiting 10 seconds...");
-        await delay(10000);
+        await delay(3000);
+
+        let GetOpenOrders = await client.GetOpenOrders({ symbol: "SOL_USDC" });
+        if (Object.keys(GetOpenOrders).length > 0) {
+            let CancelOpenOrders = await client.CancelOpenOrders({ symbol: "SOL_USDC" });
+            console.log(getNowFormatDate(), "All pending orders canceled");
+        }
 
         let userbalance = await client.Balance();
         if (userbalance.USDC.available > 5) {
@@ -66,12 +72,25 @@ const init = async (client) => {
         console.log(getNowFormatDate(), `Try again... (${e.message})`);
         console.log("=======================")
 
-        await delay(3000);
         init(client);
 
     }
 }
 
+const takeprofit = async (client, price, quantitys) => {
+    let userbalance2 = await client.Balance();
+    let takePrice = (parseFloat(price) * 1.0005).toFixed(2).toString();
+    console.log(getNowFormatDate(), `Take profit... ${quantitys} $SOL to ${(takePrice * quantitys).toFixed(2)} $USDC`);
+    let orderResultAsk = await client.ExecuteOrder({
+        orderType: "Limit",
+        postOnly: true,
+        price: takePrice,
+        quantity: quantitys,
+        side: "Ask",
+        symbol: "SOL_USDC",
+        timeInForce: "GTC"
+    });
+}
 
 
 const sellfun = async (client) => {
@@ -99,6 +118,9 @@ const sellfun = async (client) => {
     if (orderResultAsk?.status == "Filled" && orderResultAsk?.side == "Ask") {
         sellbuy += 1;
         console.log(getNowFormatDate(), "Sold successfully:", `Order number:${orderResultAsk.id}`);
+        let userbalance2 = await client.Balance();
+        console.log(getNowFormatDate(), `My Account Infos: ${userbalance2.SOL.available} $SOL | ${userbalance2.USDC.available} $USDC`, );
+
         init(client);
     } else {
         if (orderResultAsk?.status == 'Expired'){
@@ -138,6 +160,7 @@ const buyfun = async (client) => {
     if (orderResultBid?.status == "Filled" && orderResultBid?.side == "Bid") {
         successbuy += 1;
         console.log(getNowFormatDate(), "Bought successfully:", `Order number: ${orderResultBid.id}`);
+        await takeprofit(client, lastPrice, quantitys);
         init(client);
     } else {
         if (orderResultBid?.status == 'Expired'){

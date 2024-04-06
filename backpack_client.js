@@ -5,12 +5,12 @@ const axios = require('axios');
 
 
 
-// const host = '...';
-// const port = 47186;
-// const auth = {
-//     username: '',
-//     password: ''
-//   }
+const host = '141.100001.169.192';
+const port = 58532;
+const auth = {
+    username: '',
+    password: ''
+  }
 const BACKOFF_EXPONENT = 1.5;
 const DEFAULT_TIMEOUT_MS = 60000;
 const BASE_URL = "https://api.backpack.exchange/";
@@ -128,9 +128,20 @@ const rawRequest = async (instruction, headers, data) => {
     //     protocol: 'http',
     //     host: host,
     //     port: port,
-    //     auth: auth
+    //     auth: {
+    //         username: auth.username,
+    //         password: auth.password
+    //     }
     // }
-    const response = await axios(options);
+    const axiosInstance = axios.create({
+        host: host,
+        port: port,
+        auth: {
+            username: auth.username,
+            password: auth.password
+        }
+    });
+    const response = await axiosInstance(options);
     const contentType = response.headers["content-type"];
     if (contentType?.includes("application/json")) {
 
